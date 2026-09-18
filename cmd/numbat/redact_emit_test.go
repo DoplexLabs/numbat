@@ -142,7 +142,10 @@ func TestCollectEmitEventsRedactsCanaries(t *testing.T) {
 		sel  emitSelection
 	}{
 		{"events", emitSelection{events: true}},
-		{"all", emitSelection{events: true, findings: true, indicators: true}},
+		{"all", emitSelection{
+			events: true, sessionLinks: true,
+			findings: true, indicators: true,
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var records, diags bytes.Buffer

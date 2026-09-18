@@ -11,6 +11,7 @@
     "status",
     "artifacts_scanned",
     "events_emitted",
+    "session_links_emitted",
     "findings_emitted",
     "indicators_emitted",
     "diagnostics"
@@ -23,6 +24,7 @@
     "status": { "type": "string", "enum": ["complete", "partial", "error"] },
     "artifacts_scanned": { "type": "integer", "minimum": 0 },
     "events_emitted": { "type": "integer", "minimum": 0 },
+    "session_links_emitted": { "type": "integer", "minimum": 0 },
     "findings_emitted": { "type": "integer", "minimum": 0 },
     "indicators_emitted": { "type": "integer", "minimum": 0 },
     "diagnostics": { "type": "integer", "minimum": 0 },

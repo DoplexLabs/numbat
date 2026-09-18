@@ -64,13 +64,14 @@ func decodeEventRecords(t *testing.T, out string) []model.Event {
 // scanSummary is the subset of the terminal scan_summary record the tests assert
 // on. decodeSummary finds the single scan_summary line on stdout and decodes it.
 type scanSummary struct {
-	RecordType        string `json:"record_type"`
-	Status            string `json:"status"`
-	ArtifactsScanned  int    `json:"artifacts_scanned"`
-	EventsEmitted     int    `json:"events_emitted"`
-	FindingsEmitted   int    `json:"findings_emitted"`
-	IndicatorsEmitted int    `json:"indicators_emitted"`
-	Diagnostics       int    `json:"diagnostics"`
+	RecordType          string `json:"record_type"`
+	Status              string `json:"status"`
+	ArtifactsScanned    int    `json:"artifacts_scanned"`
+	EventsEmitted       int    `json:"events_emitted"`
+	SessionLinksEmitted int    `json:"session_links_emitted"`
+	FindingsEmitted     int    `json:"findings_emitted"`
+	IndicatorsEmitted   int    `json:"indicators_emitted"`
+	Diagnostics         int    `json:"diagnostics"`
 }
 
 func decodeSummary(t *testing.T, out string) scanSummary {
@@ -257,9 +258,13 @@ func TestParseEmitModes(t *testing.T) {
 		{nil, emitSelection{findings: true}},
 		{[]string{emitFindings}, emitSelection{findings: true}},
 		{[]string{emitEvents}, emitSelection{events: true}},
+		{[]string{emitSessionLinks}, emitSelection{sessionLinks: true}},
 		{[]string{emitIndicators}, emitSelection{indicators: true}},
 		{[]string{emitFindings, emitIndicators}, emitSelection{findings: true, indicators: true}},
-		{[]string{emitAll}, emitSelection{events: true, findings: true, indicators: true}},
+		{[]string{emitAll}, emitSelection{
+			events: true, sessionLinks: true,
+			findings: true, indicators: true,
+		}},
 	}
 	for _, tc := range tests {
 		t.Run(strings.Join(tc.in, "+"), func(t *testing.T) {

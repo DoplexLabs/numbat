@@ -23,6 +23,10 @@ func TestPublishedRecordSchemasStayCurrent(t *testing.T) {
 			recordType: RecordEvent,
 			fields:     withEnvelope(jsonFields(reflect.TypeOf(model.Event{})), true),
 		},
+		"session-link-record.schema.json": {
+			recordType: RecordSessionLink,
+			fields:     withEnvelope(jsonFields(reflect.TypeOf(model.SessionLink{})), true),
+		},
 		"finding-record.schema.json": {
 			recordType: RecordFinding,
 			fields:     withEnvelope(jsonFields(reflect.TypeOf(model.Finding{})), true),
