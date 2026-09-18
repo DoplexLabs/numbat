@@ -1509,6 +1509,15 @@ func TestExtractCodexSubagentContext(t *testing.T) {
 		res.Events[3].EventType != model.EventSessionEnd {
 		t.Fatalf("event order = %s", dumpEvents(res.Events))
 	}
+	if len(res.SessionLinks) != 1 {
+		t.Fatalf("session links = %+v, want parent/subagent lineage", res.SessionLinks)
+	}
+	link := res.SessionLinks[0]
+	if link.Relationship != model.SessionLinkParentSubagent ||
+		link.Left.SessionID != "019f620e-730d-76e2-8204-f108cfe2f082" ||
+		link.Right.SessionID != "019f84fe-e5e1-7f80-8745-493ccff96186" {
+		t.Fatalf("session link = %+v", link)
+	}
 }
 
 func TestCodexSessionMetaSourceShapes(t *testing.T) {

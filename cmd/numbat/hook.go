@@ -367,6 +367,15 @@ func handleHook(event string, lc hook.Lifecycle, agent, sourceAgent string, stdi
 	sequenceUnavailable := stateErr != nil
 
 	events := hook.MapEvents(lc, agent, sourceAgent, hookEventID(run), payload)
+	if opts.sel.sessionLinks {
+		for _, link := range hook.SessionLinks(agent, sourceAgent, payload) {
+			if emitErr := em.EmitSessionLink(link); emitErr != nil {
+				return false, "", "", closeWithDiagnostic(
+					fmt.Errorf("emit session link: %w", emitErr),
+				)
+			}
+		}
+	}
 	if !opts.includeReasoning {
 		filtered := events[:0]
 		for _, ev := range events {

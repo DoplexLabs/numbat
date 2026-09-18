@@ -124,6 +124,9 @@ func setMessageContent(ev *model.Event, src Source, raw string) {
 type Result struct {
 	// Events are the normalized events, in artifact order.
 	Events []model.Event
+	// SessionLinks are explicit source-reported identity relationships. They
+	// never rely on time proximity or content similarity.
+	SessionLinks []model.SessionLink
 	// Diagnostics record a bounded number of non-fatal parse problems (a
 	// malformed line, an unrecognized record shape) so a caller can surface
 	// coverage gaps without the parse aborting or flooding its output.

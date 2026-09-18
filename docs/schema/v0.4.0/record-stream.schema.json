@@ -4,6 +4,7 @@
   "description": "One line from numbat's main record stream or diagnostic stream. Route on record_type for the precise schema.",
   "oneOf": [
     { "$ref": "event-record.schema.json" },
+    { "$ref": "session-link-record.schema.json" },
     { "$ref": "finding-record.schema.json" },
     { "$ref": "enforcement-record.schema.json" },
     { "$ref": "indicator-record.schema.json" },

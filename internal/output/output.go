@@ -1,7 +1,7 @@
 // Package output emits the NDJSON record stream and diagnostics. Every record
 // written to the records sink is one JSON object on its own line carrying a
-// record_type discriminator (finding | event | enforcement | indicator |
-// scan_summary) plus
+// record_type discriminator (finding | event | session_link | enforcement |
+// indicator | scan_summary) plus
 // a run_id and schema_version envelope, so a single stream can be split by a
 // downstream consumer. Diagnostics normally go to a separate writer (stderr by
 // default); callers whose stderr is a control channel can route diagnostic
@@ -27,6 +27,7 @@ import (
 const (
 	RecordFinding     = "finding"
 	RecordEvent       = "event"
+	RecordSessionLink = "session_link"
 	RecordEnforcement = "enforcement"
 	RecordIndicator   = "indicator"
 	RecordScanSummary = "scan_summary"
@@ -112,12 +113,13 @@ type Indicator struct {
 // for a non-http sink, so the keys never appear and those summaries stay
 // byte-identical to before sinks existed.
 type ScanSummary struct {
-	Status            string `json:"status"`
-	ArtifactsScanned  int    `json:"artifacts_scanned"`
-	EventsEmitted     int    `json:"events_emitted"`
-	FindingsEmitted   int    `json:"findings_emitted"`
-	IndicatorsEmitted int    `json:"indicators_emitted"`
-	Diagnostics       int    `json:"diagnostics"`
+	Status              string `json:"status"`
+	ArtifactsScanned    int    `json:"artifacts_scanned"`
+	EventsEmitted       int    `json:"events_emitted"`
+	SessionLinksEmitted int    `json:"session_links_emitted"`
+	FindingsEmitted     int    `json:"findings_emitted"`
+	IndicatorsEmitted   int    `json:"indicators_emitted"`
+	Diagnostics         int    `json:"diagnostics"`
 
 	// HTTPBatchesSent is the number of batches acknowledged (2xx) before the
 	// summary batch. HTTPRecordsSent is the NDJSON lines in those batches. Both
@@ -164,15 +166,16 @@ type Emitter struct {
 	// fullContent is fixed by a constructor option before concurrent use.
 	fullContent bool
 
-	mu                sync.Mutex
-	sink              Sink
-	diags             *json.Encoder
-	diagnosticsInSink bool
-	eventsEmitted     int
-	findingsEmitted   int
-	indicatorsEmitted int
-	diagnostics       int
-	recordErrors      int
+	mu                  sync.Mutex
+	sink                Sink
+	diags               *json.Encoder
+	diagnosticsInSink   bool
+	eventsEmitted       int
+	sessionLinksEmitted int
+	findingsEmitted     int
+	indicatorsEmitted   int
+	diagnostics         int
+	recordErrors        int
 }
 
 // EmitterOption configures an Emitter before it is used.
@@ -186,11 +189,12 @@ func WithFullContent() EmitterOption {
 
 // Stats is a point-in-time snapshot of emitter counters.
 type Stats struct {
-	EventsEmitted     int
-	FindingsEmitted   int
-	IndicatorsEmitted int
-	Diagnostics       int
-	RecordErrors      int
+	EventsEmitted       int
+	SessionLinksEmitted int
+	FindingsEmitted     int
+	IndicatorsEmitted   int
+	Diagnostics         int
+	RecordErrors        int
 }
 
 // New constructs an Emitter writing records to records and diagnostics to
@@ -309,6 +313,21 @@ func (e *Emitter) EmitEvent(ev model.Event) error {
 	return nil
 }
 
+// EmitSessionLink writes one explicit source-identity relationship.
+func (e *Emitter) EmitSessionLink(link model.SessionLink) error {
+	if err := link.Validate(); err != nil {
+		return err
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if err := e.emitLocked(RecordSessionLink, link); err != nil {
+		e.recordErrors++
+		return err
+	}
+	e.sessionLinksEmitted++
+	return nil
+}
+
 // EmitEnforcement writes one computed decision for a matched pre-action hook.
 // Unlike a finding, this record states whether Numbat selected its deny
 // contract or left the host's permission flow unchanged.
@@ -387,11 +406,12 @@ func (e *Emitter) Stats() Stats {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return Stats{
-		EventsEmitted:     e.eventsEmitted,
-		FindingsEmitted:   e.findingsEmitted,
-		IndicatorsEmitted: e.indicatorsEmitted,
-		Diagnostics:       e.diagnostics,
-		RecordErrors:      e.recordErrors,
+		EventsEmitted:       e.eventsEmitted,
+		SessionLinksEmitted: e.sessionLinksEmitted,
+		FindingsEmitted:     e.findingsEmitted,
+		IndicatorsEmitted:   e.indicatorsEmitted,
+		Diagnostics:         e.diagnostics,
+		RecordErrors:        e.recordErrors,
 	}
 }
 

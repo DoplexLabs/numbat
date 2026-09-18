@@ -321,6 +321,25 @@ func (e CodexExtractor) applySessionMeta(res *Result, src Source, sha string, st
 	if firstMeta {
 		st.sessionID = meta.ID
 		st.sessionTreeID, st.parentSessionID, st.subAgentID, st.subAgent = meta.relationshipContext()
+		if st.parentSessionID != "" && st.sessionID != "" &&
+			st.parentSessionID != st.sessionID {
+			link, linkErr := model.NewSessionLink(
+				model.AgentCodex,
+				model.SessionIdentity{
+					Namespace: "artifact",
+					SessionID: st.parentSessionID,
+				},
+				model.SessionIdentity{
+					Namespace: "artifact",
+					SessionID: st.sessionID,
+				},
+				model.SessionLinkParentSubagent,
+				[]string{"codex_rollout:session_meta"},
+			)
+			if linkErr == nil {
+				res.SessionLinks = append(res.SessionLinks, link)
+			}
+		}
 	}
 	if st.projectPath == "" {
 		st.projectPath = meta.Cwd

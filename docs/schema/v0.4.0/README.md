@@ -4,7 +4,7 @@ This directory contains JSON Schema Draft 2020-12 contracts for numbat's emitted
 NDJSON records.
 
 - `record-stream.schema.json` accepts any record line from the main record
-  stream (`event`, `finding`, `enforcement`, `indicator`, or terminal
+  stream (`event`, `session_link`, `finding`, `enforcement`, `indicator`, or terminal
   `scan_summary`) or the separate diagnostic stream (`diagnostic`).
 - The per-record schemas are the contracts to use when a downstream receiver
   routes on `record_type`.
@@ -53,6 +53,12 @@ select this directory.
 Codex live child events now use the child thread as `session_id` and retain the
 shared value as `session_tree_id`. Use `sub_agent_id`, not the display-only
 `sub_agent`, when a query needs stable child identity.
+
+Version 0.4.0 also adds `session_link` records for relationships explicitly
+reported by a source: hook-to-artifact aliases, rotated artifacts, and
+parent-to-subagent lineage. These records are always high confidence and carry
+source references. They never encode a join inferred from timing, content, cwd,
+command, or model similarity.
 
 Conversation events always use a bounded `content_preview`. With
 `--content full`, `content` is redacted and bounded to 1 MiB. `content_bytes`

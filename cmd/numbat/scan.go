@@ -269,12 +269,13 @@ func runScan(args []string, stdout, stderr io.Writer) int {
 	// there is surfaced as a stderr diagnostic since the summary line is already
 	// committed to the sink.
 	summary := output.ScanSummary{
-		Status:            status,
-		ArtifactsScanned:  sc.parsed,
-		EventsEmitted:     st.EventsEmitted,
-		FindingsEmitted:   st.FindingsEmitted,
-		IndicatorsEmitted: st.IndicatorsEmitted,
-		Diagnostics:       st.Diagnostics,
+		Status:              status,
+		ArtifactsScanned:    sc.parsed,
+		EventsEmitted:       st.EventsEmitted,
+		SessionLinksEmitted: st.SessionLinksEmitted,
+		FindingsEmitted:     st.FindingsEmitted,
+		IndicatorsEmitted:   st.IndicatorsEmitted,
+		Diagnostics:         st.Diagnostics,
 	}
 	applyHTTPStats(&summary, em.SinkStats())
 	summaryDeliveryFailed := false
@@ -343,11 +344,12 @@ func failScan(em *output.Emitter, msg string) int {
 	em.Diag("error", msg)
 	st := em.Stats()
 	summary := output.ScanSummary{
-		Status:            output.StatusError,
-		EventsEmitted:     st.EventsEmitted,
-		FindingsEmitted:   st.FindingsEmitted,
-		IndicatorsEmitted: st.IndicatorsEmitted,
-		Diagnostics:       st.Diagnostics,
+		Status:              output.StatusError,
+		EventsEmitted:       st.EventsEmitted,
+		SessionLinksEmitted: st.SessionLinksEmitted,
+		FindingsEmitted:     st.FindingsEmitted,
+		IndicatorsEmitted:   st.IndicatorsEmitted,
+		Diagnostics:         st.Diagnostics,
 	}
 	applyHTTPStats(&summary, em.SinkStats())
 	if err := em.EmitSummary(summary); err != nil {
@@ -361,21 +363,23 @@ func failScan(em *output.Emitter, msg string) int {
 // --emit flag. findings is the default; events and indicators are opt-in; "all"
 // enables every kind.
 type emitSelection struct {
-	events     bool
-	findings   bool
-	indicators bool
+	events       bool
+	sessionLinks bool
+	findings     bool
+	indicators   bool
 }
 
 // --emit values.
 const (
-	emitFindings   = "findings"
-	emitEvents     = "events"
-	emitIndicators = "indicators"
-	emitAll        = "all"
+	emitFindings     = "findings"
+	emitEvents       = "events"
+	emitSessionLinks = "session-links"
+	emitIndicators   = "indicators"
+	emitAll          = "all"
 )
 
 func emitFlagHelp() string {
-	return "record kind to emit: findings, events, indicators, or all (repeatable; default findings)"
+	return "record kind to emit: findings, events, session-links, indicators, or all (repeatable; default findings)"
 }
 
 // parseEmit validates the repeatable --emit flag and returns the selected record
@@ -407,10 +411,15 @@ func parseEmit(values []string) (emitSelection, error) {
 			sel.findings = true
 		case emitEvents:
 			sel.events = true
+		case emitSessionLinks:
+			sel.sessionLinks = true
 		case emitIndicators:
 			sel.indicators = true
 		case emitAll:
-			sel = emitSelection{events: true, findings: true, indicators: true}
+			sel = emitSelection{
+				events: true, sessionLinks: true,
+				findings: true, indicators: true,
+			}
 		default:
 			return emitSelection{}, invalidEmitError(raw)
 		}
@@ -422,11 +431,11 @@ func parseEmit(values []string) (emitSelection, error) {
 }
 
 func invalidEmitError(raw string) error {
-	return fmt.Errorf("invalid --emit %q: want findings, events, indicators, or all", raw)
+	return fmt.Errorf("invalid --emit %q: want findings, events, session-links, indicators, or all", raw)
 }
 
 func (s emitSelection) canonicalModes() []string {
-	if s.events && s.findings && s.indicators {
+	if s.events && s.sessionLinks && s.findings && s.indicators {
 		return []string{emitAll}
 	}
 	var modes []string
@@ -436,6 +445,9 @@ func (s emitSelection) canonicalModes() []string {
 	if s.events {
 		modes = append(modes, emitEvents)
 	}
+	if s.sessionLinks {
+		modes = append(modes, emitSessionLinks)
+	}
 	if s.indicators {
 		modes = append(modes, emitIndicators)
 	}
@@ -443,7 +455,7 @@ func (s emitSelection) canonicalModes() []string {
 }
 
 func (s emitSelection) defaultFindingsOnly() bool {
-	return s.findings && !s.events && !s.indicators
+	return s.findings && !s.events && !s.sessionLinks && !s.indicators
 }
 
 // scanner holds per-run artifact-processing state.
@@ -509,6 +521,15 @@ func (s *scanner) scanArtifact(a discover.Artifact) {
 	}
 	for _, d := range res.Diagnostics {
 		s.emit.Diag("warn", fmt.Sprintf("%s:%d: %s", d.Path, d.Line, d.Msg))
+	}
+	if s.sel.sessionLinks {
+		for _, link := range res.SessionLinks {
+			if err := s.emit.EmitSessionLink(link); err != nil {
+				s.emit.Diag("error", err.Error())
+				s.failed++
+				return
+			}
+		}
 	}
 
 	eventFailed := false
